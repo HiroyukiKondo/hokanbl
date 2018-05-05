@@ -1,0 +1,137 @@
+ 	
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<title>作業員放射線管理システム</title>
+</head>
+<body>
+<form>
+  <div>
+      <h1>従業員の線量検索</h1>
+    <label for="workerid">作業員ID：(例：100)</label><br />
+    <input id="workerid" type="text" size="10" />
+    <input id="search" type="button" value="検索" />
+  </div>
+  <div>
+    <label for="name">氏名：</label><br />
+    <input id="name" type="text" size="15" readonly="readonly"/><br />
+    <label for="rad">合計被ばく放射線量(μSv)：</label><br />
+    <input id="rad" type="text" size="10" readonly="readonly"/>
+  </div>
+
+  <div>
+        <h1>従業員の線量登録</h1>
+       <label for="workerid_sub">作業員ID：</label><br />
+       <input id="workerid_sub" type="text" size="10" /><br />
+       <label for="plant_id">被ばくした発電所ID：</label><br />
+       <input id="plant_id" type="text" size="10" /><br />
+       <label for="rad_sub">被ばくした放射線量(μSv)：</label><br />
+        <input id="rad_sub" type="text" size="10" /><br />
+       <input id="update" type="button" value="登録" />
+    </div>
+
+    <div>
+        <h1>更新履歴</h1>
+        <input id="search2" type="button" value="表示" />
+    </div>
+    <div>
+        <table id="tbl" border="1">
+            <tbody>
+                <tr>
+                    <th>作業者</th><th>発電所</th><th>被ばく量(μSV)</th><th>更新日時</th>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</form>
+
+<script src="http://code.jquery.com/jquery-1.11.3.min.js"></script>
+<script>
+// ［検索］ボタンクリックで氏名検索を実行
+$(function() {
+  $('#search').click(function() {
+      //var hostname = 'localhost:3000' // 検証用
+      var hostname = 'block.japanwest.cloudapp.azure.com:3000' // 本番用
+    fetch('http://' + hostname + '/api/org.kepco.radnetwork.Worker/' + $('#workerid').val())
+        .then(function(response){
+            return response.json();
+            }).then(function(json){
+                $('#name').val(json.firstName + ' ' + json.lastName);
+                $('#rad').val(json.RadDose);
+            });
+  });
+});
+
+// ［登録］ボタンクリックで放射線量の登録を実行
+$(function() {
+
+  $('#update').click(function() {
+      //var hostname = 'localhost:3000' // 検証用
+      var data = {
+         $class: "org.kepco.radnetwork.Addrad",
+         AddRadDose: $('#rad_sub').val(),
+         worker: "resource:org.kepco.radnetwork.Worker#" + $('#workerid_sub').val(),
+         plant : "resource:org.kepco.radnetwork.Plant#" + $('#plant_id').val()
+    }
+      var hostname = 'block.japanwest.cloudapp.azure.com:3000' // 本番用
+      var url = 'http://' + hostname + '/api/org.kepco.radnetwork.Addrad/'      
+    fetch(url ,{
+        method: 'POST',
+        headers: new Headers({
+         'Content-Type': 'application/json'
+        }),
+       body: JSON.stringify(data)
+    }).then(res => res.json())
+    .catch(error => console.error('Error:', error))
+    .then(response => console.log('Success:', response));
+//    $.post(url, data)
+  });
+});
+
+// ［検索］ボタンクリックで過去履歴を実行
+$(function() {
+  $('#search2').click(function() {
+    // テーブルをクリア
+    $("#tbl").empty()
+    var hostname = 'block.japanwest.cloudapp.azure.com:3000' // 本番用
+    var filter_str = {
+      worker: "resource:org.kepco.radnetwork.Worker#" + $('#workerid3').val()
+    }
+    var url = 'http://' + hostname + '/api/org.kepco.radnetwork.Addrad/'  
+    fetch(url)
+        .then(function(response){
+            return response.json();
+            }).then(function(json){
+              var rows = "";
+              rows += "<tr>";
+              rows += "<th>作業者</th><th>発電所</th><th>被ばく量(μSV)</th><th>更新日時</th>";
+              rows += "</tr>"
+              // JSONをテーブル化する。
+               //テーブルとして表示するため、htmlを構築
+              for (i = 0; i < json.length; i++) {
+                rows += "<tr>";
+                rows += "<td>";
+                rows += json[i]["worker"]; // 作業者
+                rows += "</td>";
+                rows += "<td>";
+                rows += json[i]["plant"]; // 発電所
+                rows += "</td>";
+                rows += "<td>";
+                rows += json[i]["AddRadDose"]; // 被ばく量
+                rows += "</td>";
+                rows += "<td>";
+                rows += json[i]["timestamp"]; // 更新日時
+                rows += "</td>";
+                rows += "</tr>";
+              }
+                
+                //テーブルに作成したhtmlを追加する
+                $("#tbl").append(rows);
+            });
+  });
+});
+
+</script>
+</body>
+</html>
